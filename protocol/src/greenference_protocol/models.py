@@ -82,6 +82,8 @@ class DeploymentRecord(BaseModel):
     ready_instances: int = 0
     endpoint: str | None = None
     last_error: str | None = None
+    retry_count: int = Field(default=0, ge=0)
+    health_check_failures: int = Field(default=0, ge=0)
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
 
