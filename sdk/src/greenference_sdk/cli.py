@@ -44,6 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
     invoke = subparsers.add_parser("invoke")
     invoke.add_argument("--model", required=True)
     invoke.add_argument("--message", required=True)
+    invoke.add_argument("--stream", action="store_true")
 
     workloads = subparsers.add_parser("workloads")
     workloads_sub = workloads.add_subparsers(dest="workloads_command", required=True)
@@ -121,14 +122,15 @@ def main() -> None:
         return
 
     if args.command == "invoke":
-        _emit(
-            client.invoke(
-                {
-                    "model": args.model,
-                    "messages": [{"role": "user", "content": args.message}],
-                }
-            )
-        )
+        payload = {
+            "model": args.model,
+            "messages": [{"role": "user", "content": args.message}],
+        }
+        if args.stream:
+            for line in client.invoke_stream(payload):
+                print(line)
+        else:
+            _emit(client.invoke(payload))
         return
 
     if args.command == "workloads" and args.workloads_command == "list":

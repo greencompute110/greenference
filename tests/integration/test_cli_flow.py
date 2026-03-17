@@ -12,11 +12,13 @@ from greenference_sdk.cli import main
 
 
 class _FakeResponse:
-    def __init__(self, payload: dict | list, status: int = 200) -> None:
+    def __init__(self, payload: dict | list | str, status: int = 200) -> None:
         self.payload = payload
         self.status = status
 
     def read(self) -> bytes:
+        if isinstance(self.payload, str):
+            return self.payload.encode()
         return json.dumps(self.payload).encode()
 
     def __enter__(self) -> _FakeResponse:
@@ -77,6 +79,8 @@ def _fake_urlopen(target):  # type: ignore[no-untyped-def]
             }
         )
     if path.endswith("/v1/chat/completions"):
+        if payload.get("stream"):
+            return _FakeResponse('data: {"content":"greenference-response: hi"}\n\ndata: [DONE]\n')
         return _FakeResponse(
             {
                 "id": "resp-1",
@@ -100,6 +104,7 @@ def test_cli_happy_path_against_local_api(monkeypatch: pytest.MonkeyPatch) -> No
         ["greenference", "--base-url", base_url, "build", "--image", "greenference/echo:latest", "--context-uri", "s3://builds/echo.zip"],
         ["greenference", "--base-url", base_url, "deploy", "--name", "echo-model", "--image", "greenference/echo:latest"],
         ["greenference", "--base-url", base_url, "invoke", "--model", "wl-1", "--message", "hi"],
+        ["greenference", "--base-url", base_url, "invoke", "--model", "wl-1", "--message", "hi", "--stream"],
         ["greenference", "--base-url", base_url, "workloads", "list"],
     ]
 
