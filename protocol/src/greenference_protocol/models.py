@@ -26,7 +26,18 @@ class APIKeyRecord(BaseModel):
     user_id: str | None = None
     admin: bool = False
     scopes: list[str] = Field(default_factory=list)
-    secret: str
+    secret: str = ""
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class APIKeySummary(BaseModel):
+    """API key without secret (for list/get responses)."""
+
+    key_id: str
+    name: str
+    user_id: str | None = None
+    admin: bool = False
+    scopes: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -51,6 +62,8 @@ class UserRecord(BaseModel):
     bio: str | None = None
     website: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+    balance_tao: float = Field(default=0.0, ge=0.0)
+    balance_usd: float = Field(default=0.0, ge=0.0)
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -102,6 +115,7 @@ class WorkloadUpdateRequest(BaseModel):
     logo_uri: str | None = Field(default=None, min_length=1, max_length=1024)
     tags: list[str] | None = None
     workload_alias: str | None = Field(default=None, min_length=1, max_length=100)
+    clear_workload_alias: bool = False
     ingress_host: str | None = Field(default=None, min_length=1, max_length=255)
     pricing_class: str | None = Field(default=None, min_length=1, max_length=32)
     public: bool | None = None
@@ -361,8 +375,10 @@ class WorkloadShareRecord(BaseModel):
 
 class BuildRequest(BaseModel):
     image: str = Field(min_length=1)
-    context_uri: str = Field(min_length=1)
+    context_uri: str | None = None
     dockerfile_path: str = Field(default="Dockerfile", min_length=1)
+    context_archive_b64: str | None = None
+    context_archive_name: str | None = Field(default=None, min_length=1, max_length=255)
     display_name: str | None = Field(default=None, min_length=1, max_length=128)
     readme: str | None = Field(default=None, max_length=20000)
     logo_uri: str | None = Field(default=None, min_length=1, max_length=1024)

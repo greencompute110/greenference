@@ -3,6 +3,7 @@ from greenference_protocol.enums import DeploymentState, SecurityTier, WorkloadK
 from greenference_protocol.models import (
     APIKeyCreateRequest,
     APIKeyRecord,
+    APIKeySummary,
     BuildAttemptRecord,
     BuildContextRecord,
     BuildEventRecord,
@@ -51,6 +52,7 @@ from greenference_protocol.models import (
 __all__ = [
     "APIKeyCreateRequest",
     "APIKeyRecord",
+    "APIKeySummary",
     "BuildAttemptRecord",
     "BuildContextRecord",
     "BuildEventRecord",

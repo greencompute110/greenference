@@ -5,10 +5,15 @@ description = "Greenference Python SDK and CLI"
 requires-python = ">=3.12"
 dependencies = [
   "greenference-protocol",
+  "typer>=0.12,<1.0",
+  "rich>=13.0,<15.0",
 ]
 
+[project.optional-dependencies]
+workload-templates = ["chutes>=0.5.5"]
+
 [project.scripts]
-greenference = "greenference_sdk.cli:main"
+greenference = "greenference.cli:main"
 
 [tool.uv.sources]
 greenference-protocol = { workspace = true }
@@ -18,5 +23,5 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/greenference_sdk"]
+packages = ["src/greenference"]
 
