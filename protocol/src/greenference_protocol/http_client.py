@@ -44,8 +44,8 @@ class ControlPlaneHTTPClient:
         base_url: Control-plane base URL.
         hotkey: Miner's SS58 hotkey address.
         auth_secret: HMAC shared secret (used when auth_mode="hmac").
-        hotkey_wallet_path: Path to Bittensor hotkey file (~/.bittensor/wallets/{coldkey}/hotkeys/{hotkey}).
-                           Used for ed25519 signing in production (auth_mode="hotkey").
+        coldkey_name: Bittensor wallet coldkey name for ed25519 signing.
+        hotkey_name: Bittensor wallet hotkey name (default: "default").
         auth_mode: "hotkey" for ed25519 (production) or "hmac" for shared secret (dev).
         timeout: HTTP request timeout in seconds.
     """
@@ -55,7 +55,8 @@ class ControlPlaneHTTPClient:
         base_url: str,
         hotkey: str,
         auth_secret: str = "",
-        hotkey_wallet_path: str | None = None,
+        coldkey_name: str | None = None,
+        hotkey_name: str = "default",
         auth_mode: str = "hmac",
         timeout: int = 30,
     ) -> None:
@@ -65,10 +66,10 @@ class ControlPlaneHTTPClient:
         self.auth_mode = auth_mode
         self.timeout = timeout
 
-        # Load hotkey seed from wallet file in production mode
+        # Load hotkey seed from wallet in production mode
         self.hotkey_seed: str | None = None
-        if auth_mode == "hotkey" and hotkey_wallet_path:
-            self.hotkey_seed = load_hotkey_from_wallet(hotkey_wallet_path)
+        if auth_mode == "hotkey" and coldkey_name:
+            self.hotkey_seed = load_hotkey_from_wallet(coldkey_name, hotkey_name)
 
     def _signed_headers(self, body: bytes) -> dict[str, str]:
         if self.auth_mode == "hotkey" and self.hotkey_seed:

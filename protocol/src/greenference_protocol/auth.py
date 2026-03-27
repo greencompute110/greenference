@@ -108,25 +108,28 @@ def verify_payload(
 # ---------------------------------------------------------------------------
 
 
-def load_hotkey_from_wallet(wallet_path: str) -> str:
-    """Load hotkey seed from Bittensor wallet file.
+def load_hotkey_from_wallet(coldkey_name: str, hotkey_name: str = "default") -> str:
+    """Load hotkey seed from Bittensor wallet.
 
-    Args:
-        wallet_path: Path to hotkey file (~/.bittensor/wallets/{coldkey}/{hotkey}).
-                     Contains JSON with "seed" or "private_key" field.
+    Reads from ~/.bittensor/wallets/{coldkey_name}/hotkeys/{hotkey_name}.
 
     Returns:
         Seed hex string for Keypair.create_from_seed().
     """
     import json
+    import os
 
+    wallet_path = os.path.expanduser(
+        f"~/.bittensor/wallets/{coldkey_name}/hotkeys/{hotkey_name}"
+    )
     try:
         with open(wallet_path, "r") as f:
             wallet = json.load(f)
-        # Try common field names
-        seed = wallet.get("seed") or wallet.get("private_key")
+        seed = wallet.get("secretSeed") or wallet.get("privateKey") or wallet.get("seed") or wallet.get("private_key")
         if not seed:
-            raise ValueError(f"No seed or private_key found in {wallet_path}")
+            raise ValueError(f"No secretSeed/privateKey found in {wallet_path}")
+        if isinstance(seed, str) and seed.startswith("0x"):
+            seed = seed[2:]
         return seed
     except Exception as exc:
         raise RuntimeError(f"Failed to load hotkey from {wallet_path}: {exc}") from exc
