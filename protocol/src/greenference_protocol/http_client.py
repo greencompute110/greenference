@@ -1,7 +1,11 @@
 """HTTP client for remote control-plane communication.
 
 Replaces in-process ControlPlaneService imports, allowing agents to talk to a
-remote control-plane over HTTP with HMAC-signed requests.
+remote control-plane over HTTP with signed requests.
+
+Supports two auth modes:
+- **hotkey**: ed25519 signing with the miner's hotkey keypair (production)
+- **hmac**: HMAC-SHA256 with a shared secret (local dev)
 """
 
 from __future__ import annotations
@@ -12,7 +16,7 @@ from typing import Any
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from greenference_protocol.auth import sign_payload
+from greenference_protocol.auth import sign_payload, sign_payload_hotkey
 from greenference_protocol.models import (
     CapacityUpdate,
     DeploymentRecord,
@@ -34,21 +38,44 @@ class ControlPlaneHTTPError(Exception):
 
 
 class ControlPlaneHTTPClient:
-    """Signed HTTP client for the control-plane miner API."""
+    """Signed HTTP client for the control-plane miner API.
 
-    def __init__(self, base_url: str, hotkey: str, auth_secret: str, timeout: int = 30) -> None:
+    Args:
+        base_url: Control-plane base URL.
+        hotkey: Miner's SS58 hotkey address.
+        auth_secret: HMAC shared secret (used when auth_mode="hmac").
+        hotkey_uri: Keypair seed URI for ed25519 signing (used when auth_mode="hotkey").
+        auth_mode: "hotkey" for ed25519 (production) or "hmac" for shared secret (dev).
+        timeout: HTTP request timeout in seconds.
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        hotkey: str,
+        auth_secret: str = "",
+        hotkey_uri: str | None = None,
+        auth_mode: str = "hmac",
+        timeout: int = 30,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.hotkey = hotkey
         self.auth_secret = auth_secret
+        self.hotkey_uri = hotkey_uri
+        self.auth_mode = auth_mode
         self.timeout = timeout
 
     def _signed_headers(self, body: bytes) -> dict[str, str]:
-        signed = sign_payload(self.auth_secret, self.hotkey, body)
+        if self.auth_mode == "hotkey" and self.hotkey_uri:
+            signed = sign_payload_hotkey(self.hotkey_uri, self.hotkey, body)
+        else:
+            signed = sign_payload(self.auth_secret, self.hotkey, body)
         return {
             "X-Miner-Hotkey": signed.actor_id,
             "X-Miner-Signature": signed.signature,
             "X-Miner-Nonce": signed.nonce,
             "X-Miner-Timestamp": str(signed.timestamp),
+            "X-Miner-Auth-Mode": signed.auth_mode,
             "Content-Type": "application/json",
         }
 

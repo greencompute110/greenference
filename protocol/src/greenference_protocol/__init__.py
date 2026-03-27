@@ -1,4 +1,11 @@
-from greenference_protocol.auth import MemoryReplayStore, SignedRequest, sign_payload, verify_payload
+from greenference_protocol.auth import (
+    MemoryReplayStore,
+    SignedRequest,
+    sign_payload,
+    sign_payload_hotkey,
+    verify_payload,
+    verify_payload_hotkey,
+)
 from greenference_protocol.http_client import ControlPlaneHTTPClient, ControlPlaneHTTPError
 from greenference_protocol.enums import (
     DeploymentState,
@@ -141,5 +148,7 @@ __all__ = [
     "WorkloadSpec",
     "WorkloadUpdateRequest",
     "sign_payload",
+    "sign_payload_hotkey",
     "verify_payload",
+    "verify_payload_hotkey",
 ]

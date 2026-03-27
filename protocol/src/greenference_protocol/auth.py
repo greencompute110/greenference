@@ -1,7 +1,18 @@
+"""Request signing and verification for miner ↔ validator communication.
+
+Supports two modes:
+- **hotkey** (production): Miners sign with their ed25519 hotkey private key.
+  Validators verify using the public key from the on-chain metagraph.
+  No shared secret needed — fully decentralized.
+- **hmac** (local dev): Classic HMAC-SHA256 with a shared secret.
+  Used when no hotkey keypair is available.
+"""
+
 from __future__ import annotations
 
 import hashlib
 import hmac
+import logging
 import secrets
 from dataclasses import dataclass
 from time import time
@@ -9,12 +20,15 @@ from typing import Protocol
 
 from pydantic import BaseModel, Field
 
+logger = logging.getLogger(__name__)
+
 
 class SignedRequest(BaseModel):
-    actor_id: str
+    actor_id: str  # hotkey SS58 address
     nonce: str = Field(default_factory=lambda: secrets.token_hex(8))
     timestamp: int = Field(default_factory=lambda: int(time()))
     signature: str
+    auth_mode: str = "hmac"  # "hotkey" or "hmac"
 
 
 class ReplayStore(Protocol):
@@ -44,11 +58,18 @@ def _canonical(actor_id: str, nonce: str, timestamp: int, body: bytes) -> bytes:
     return f"{actor_id}:{nonce}:{timestamp}:{digest}".encode()
 
 
+# ---------------------------------------------------------------------------
+# HMAC signing (local dev / backward compat)
+# ---------------------------------------------------------------------------
+
+
 def sign_payload(secret: str, actor_id: str, body: bytes, nonce: str | None = None) -> SignedRequest:
+    """Sign with HMAC-SHA256 shared secret (local dev mode)."""
     request = SignedRequest(
         actor_id=actor_id,
         nonce=nonce or secrets.token_hex(8),
         signature="",
+        auth_mode="hmac",
     )
     signature = hmac.new(
         secret.encode(),
@@ -66,6 +87,7 @@ def verify_payload(
     now: int | None = None,
     window_seconds: int = 60,
 ) -> VerificationResult:
+    """Verify HMAC-SHA256 signed request (local dev mode)."""
     current_time = now or int(time())
     if abs(current_time - signed.timestamp) > window_seconds:
         return VerificationResult(valid=False, reason="signature expired")
@@ -80,3 +102,67 @@ def verify_payload(
         return VerificationResult(valid=False, reason="signature mismatch")
     return VerificationResult(valid=True)
 
+
+# ---------------------------------------------------------------------------
+# Ed25519 hotkey signing (production / Bittensor)
+# ---------------------------------------------------------------------------
+
+
+def sign_payload_hotkey(hotkey_uri: str, actor_id: str, body: bytes, nonce: str | None = None) -> SignedRequest:
+    """Sign with ed25519 hotkey private key (production mode).
+
+    Args:
+        hotkey_uri: Keypair seed URI (e.g. "//Alice") or seed hex.
+                    In production this is loaded from the Bittensor wallet.
+        actor_id: The hotkey SS58 address.
+        body: Request body bytes.
+    """
+    from substrateinterface import Keypair
+
+    request = SignedRequest(
+        actor_id=actor_id,
+        nonce=nonce or secrets.token_hex(8),
+        signature="",
+        auth_mode="hotkey",
+    )
+    message = _canonical(request.actor_id, request.nonce, request.timestamp, body)
+    keypair = Keypair.create_from_uri(hotkey_uri)
+    sig = keypair.sign(message)
+    return request.model_copy(update={"signature": sig.hex()})
+
+
+def verify_payload_hotkey(
+    signed: SignedRequest,
+    body: bytes,
+    replay_store: ReplayStore,
+    now: int | None = None,
+    window_seconds: int = 60,
+) -> VerificationResult:
+    """Verify ed25519 signature using the hotkey's public key (production mode).
+
+    No shared secret — the validator only needs the miner's SS58 address
+    (hotkey), which it gets from the metagraph.
+    """
+    from substrateinterface import Keypair
+
+    current_time = now or int(time())
+    if abs(current_time - signed.timestamp) > window_seconds:
+        return VerificationResult(valid=False, reason="signature expired")
+    if not replay_store.mark_seen(signed.actor_id, signed.nonce, signed.timestamp):
+        return VerificationResult(valid=False, reason="replay detected")
+
+    message = _canonical(signed.actor_id, signed.nonce, signed.timestamp, body)
+    try:
+        sig_bytes = bytes.fromhex(signed.signature)
+    except ValueError:
+        return VerificationResult(valid=False, reason="invalid signature encoding")
+
+    try:
+        keypair = Keypair(ss58_address=signed.actor_id)
+        if not keypair.verify(message, sig_bytes):
+            return VerificationResult(valid=False, reason="signature mismatch")
+    except Exception as exc:
+        logger.debug("hotkey verification error: %s", exc)
+        return VerificationResult(valid=False, reason="signature verification failed")
+
+    return VerificationResult(valid=True)
