@@ -606,9 +606,28 @@ class ComputePlacementRecord(BaseModel):
     updated_at: datetime = Field(default_factory=utcnow)
 
 
+class ChatCompletionContentBlock(BaseModel):
+    """OpenAI-compatible content block for multimodal messages.
+
+    Supported `type` values:
+      - "text"       → uses `text`
+      - "image_url"  → uses `image_url` = {"url": "https://..." or "data:image/...;base64,..."}
+    Additional keys are preserved for forward compatibility with vLLM's multimodal spec
+    (video_url, input_audio, etc.) via `model_config`.
+    """
+
+    type: str
+    text: str | None = None
+    image_url: dict[str, Any] | None = None
+
+    model_config = {"extra": "allow"}
+
+
 class ChatCompletionMessage(BaseModel):
     role: str
-    content: str
+    # OpenAI spec: content is either a plain string OR a list of content blocks
+    # (for multimodal — images, audio, video). Qwen2-VL, LLaVA, etc. require this form.
+    content: str | list[ChatCompletionContentBlock]
 
 
 class ChatCompletionRequest(BaseModel):
@@ -617,6 +636,9 @@ class ChatCompletionRequest(BaseModel):
     max_tokens: int | None = Field(default=2048, ge=1)
     temperature: float | None = Field(default=0.7, ge=0.0)
     stream: bool = False
+    # Pass-through for additional OpenAI fields that vLLM supports
+    # (e.g. top_p, frequency_penalty, stop, user, etc.).
+    model_config = {"extra": "allow"}
 
 
 class ChatCompletionResponse(BaseModel):
