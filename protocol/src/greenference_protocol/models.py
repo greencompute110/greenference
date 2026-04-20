@@ -550,6 +550,9 @@ class ComputeRuntimeRecord(BaseModel):
     ssh_port: int | None = None
     ssh_username: str = "user"
     ssh_fingerprint: str | None = None
+    # Extra user-exposed ports: {container_port: host_port}. Populated by the
+    # node-agent after `docker run -p` completes. Max 10 ports (enforced pod-side).
+    port_mappings: dict[int, int] = Field(default_factory=dict)
     volume_id: str | None = None
     volume_path: str | None = None
     volume_size_gb: int = 50
@@ -730,6 +733,9 @@ class UnifiedRuntimeRecord(BaseModel):
     ssh_port: int | None = None
     ssh_username: str = "user"
     ssh_fingerprint: str | None = None
+    # User-exposed TCP ports: {container_port: host_port}. Set by node-agent
+    # after the pod is running. Max 10 ports.
+    port_mappings: dict[int, int] = Field(default_factory=dict)
     volume_id: str | None = None
     volume_path: str | None = None
     volume_size_gb: int = 50
