@@ -1,3 +1,12 @@
+from greenference_protocol.billing_rates import (
+    GPU_RATE_CENTS_PER_HOUR,
+    INFERENCE_INPUT_CENTS_PER_MTOK,
+    INFERENCE_MIN_CHARGE_CENTS,
+    INFERENCE_OUTPUT_CENTS_PER_MTOK,
+    LEGACY_FALLBACK_CENTS_PER_HOUR,
+    inference_cost_cents,
+    rate_for_gpu,
+)
 from greenference_protocol.auth import (
     MemoryReplayStore,
     SignedRequest,
@@ -35,6 +44,7 @@ from greenference_protocol.models import (
     ChatCompletionMessage,
     ChatCompletionRequest,
     ChatCompletionResponse,
+    ChatCompletionUsage,
     DeploymentCreateRequest,
     DeploymentRecord,
     DeploymentUpdateRequest,
@@ -86,6 +96,14 @@ from greenference_protocol.models import (
 )
 
 __all__ = [
+    # Billing rate constants + helpers
+    "GPU_RATE_CENTS_PER_HOUR",
+    "INFERENCE_INPUT_CENTS_PER_MTOK",
+    "INFERENCE_MIN_CHARGE_CENTS",
+    "INFERENCE_OUTPUT_CENTS_PER_MTOK",
+    "LEGACY_FALLBACK_CENTS_PER_HOUR",
+    "inference_cost_cents",
+    "rate_for_gpu",
     "APIKeyCreateRequest",
     "APIKeyRecord",
     "APIKeySummary",
@@ -106,6 +124,7 @@ __all__ = [
     "ChatCompletionMessage",
     "ChatCompletionRequest",
     "ChatCompletionResponse",
+    "ChatCompletionUsage",
     "CollateralRecord",
     "ComputePlacementRecord",
     "ComputeRuntimeRecord",

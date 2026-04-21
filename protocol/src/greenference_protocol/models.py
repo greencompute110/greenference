@@ -157,6 +157,10 @@ class DeploymentRecord(BaseModel):
     endpoint: str | None = None
     ssh_private_key: str | None = None
     port_mappings: dict[int, int] = Field(default_factory=dict)
+    # Cents per GPU per hour — locked at placement from the node's gpu_model.
+    # Default 10 preserves the legacy $0.10/hr behaviour for any row that
+    # somehow skips the placement hook.
+    hourly_rate_cents: int = Field(default=10, ge=0)
     deployment_fee_usd: float = Field(default=0.0, ge=0.0)
     fee_acknowledged: bool = True
     warmup_state: str = "pending"
@@ -645,9 +649,27 @@ class ChatCompletionRequest(BaseModel):
     max_tokens: int | None = Field(default=2048, ge=1)
     temperature: float | None = Field(default=0.7, ge=0.0)
     stream: bool = False
+    # OpenAI-compatible: {"include_usage": true} on streaming requests asks
+    # vLLM to emit a final chunk with `usage.{prompt,completion,total}_tokens`
+    # so we can charge after the stream ends. The gateway injects this
+    # automatically when stream=True; users can override if they need to.
+    stream_options: dict | None = None
     # Pass-through for additional OpenAI fields that vLLM supports
     # (e.g. top_p, frequency_penalty, stop, user, etc.).
     model_config = {"extra": "allow"}
+
+
+class ChatCompletionUsage(BaseModel):
+    """OpenAI-style token usage breakdown returned by the miner.
+
+    prompt_tokens + completion_tokens = total_tokens. The gateway multiplies
+    prompt_tokens by INFERENCE_INPUT_CENTS_PER_MTOK and completion_tokens by
+    INFERENCE_OUTPUT_CENTS_PER_MTOK to compute the per-request charge.
+    """
+
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
 
 
 class ChatCompletionResponse(BaseModel):
@@ -656,6 +678,7 @@ class ChatCompletionResponse(BaseModel):
     content: str
     deployment_id: str
     routed_hotkey: str | None = None
+    usage: ChatCompletionUsage | None = None
     created_at: datetime = Field(default_factory=utcnow)
 
 
