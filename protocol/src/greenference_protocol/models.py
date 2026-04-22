@@ -846,6 +846,62 @@ class GreenEnergyAttachment(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Model catalog — Chutes-style shared inference pool
+# ---------------------------------------------------------------------------
+
+
+class ModelCatalogEntry(BaseModel):
+    """An admin-approved model that the subnet's inference pool hosts.
+
+    Each catalog entry corresponds to exactly one canonical WorkloadSpec
+    (lookup key: workload.name == model_id). Multiple miners host the same
+    workload — one DeploymentRecord per serving miner. Callers reach any
+    replica via POST /v1/chat/completions with model=<model_id>.
+    """
+
+    # Pydantic v2 reserves the `model_*` namespace for internals; opt out so
+    # `model_id`, `model_len` etc. aren't treated as shadowing.
+    model_config = {"protected_namespaces": ()}
+
+    model_id: str = Field(min_length=1, max_length=128)
+    display_name: str = ""
+    hf_repo: str = ""
+    template: str = "vllm"  # "vllm" | "vllm-vision" | "diffusion"
+    min_vram_gb_per_gpu: int = Field(default=24, ge=1)
+    gpu_count: int = Field(default=1, ge=1, le=8)
+    max_model_len: int | None = Field(default=None, ge=1)
+    visibility: str = "public"  # "public" | "gated"
+    min_replicas: int = Field(default=1, ge=0)
+    max_replicas: int | None = Field(default=None, ge=1)
+    admin_notes: str = ""
+    created_by_hotkey: str | None = None
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class CatalogSubmission(BaseModel):
+    """Miner-proposed addition to the model catalog. Admin approves/rejects;
+    approval auto-creates a ModelCatalogEntry + canonical workload."""
+
+    model_config = {"protected_namespaces": ()}
+
+    submission_id: str = Field(default_factory=lambda: str(uuid4()))
+    model_id: str = Field(min_length=1, max_length=128)
+    hotkey: str = ""
+    signature: str = ""
+    display_name: str = ""
+    hf_repo: str = ""
+    template: str = "vllm"
+    min_vram_gb_per_gpu: int = Field(default=24, ge=1)
+    gpu_count: int = Field(default=1, ge=1, le=8)
+    max_model_len: int | None = Field(default=None, ge=1)
+    rationale: str = ""
+    status: str = "pending"  # pending | approved | rejected
+    reviewer_notes: str = ""
+    submitted_at: datetime = Field(default_factory=utcnow)
+    reviewed_at: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
 # Billing models
 # ---------------------------------------------------------------------------
 
