@@ -9,9 +9,9 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "greenference-protocol",
-    "greenference-repo",
-    "greenference-sdk",
+    "greencompute-protocol",
+    "greencompute-repo",
+    "greencompute-sdk",
 ]
 
 [[package]]
@@ -900,7 +900,7 @@ wheels = [
 ]
 
 [[package]]
-name = "greenference-protocol"
+name = "greencompute-protocol"
 version = "0.1.0"
 source = { editable = "protocol" }
 dependencies = [
@@ -911,16 +911,16 @@ dependencies = [
 requires-dist = [{ name = "pydantic", specifier = ">=2.9,<3.0" }]
 
 [[package]]
-name = "greenference-repo"
+name = "greencompute-repo"
 version = "0.1.0"
 source = { virtual = "." }
 
 [[package]]
-name = "greenference-sdk"
+name = "greencompute-sdk"
 version = "0.1.0"
 source = { editable = "sdk" }
 dependencies = [
-    { name = "greenference-protocol" },
+    { name = "greencompute-protocol" },
     { name = "rich" },
     { name = "typer" },
 ]
@@ -933,7 +933,7 @@ workload-templates = [
 [package.metadata]
 requires-dist = [
     { name = "chutes", marker = "extra == 'workload-templates'", specifier = ">=0.5.5" },
-    { name = "greenference-protocol", editable = "protocol" },
+    { name = "greencompute-protocol", editable = "protocol" },
     { name = "rich", specifier = ">=13.0,<15.0" },
     { name = "typer", specifier = ">=0.12,<1.0" },
 ]
