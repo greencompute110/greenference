@@ -898,6 +898,8 @@ class CommercialInquiryCreateRequest(BaseModel):
     company: str = Field(default="", max_length=255)
     gpu_count: int | None = Field(default=None, ge=0, le=10000)
     duration: str = Field(default="", max_length=128)
+    # Free-form so users can write "ASAP", "Q1 2026", or an ISO date.
+    deployment_date: str = Field(default="", max_length=64)
     budget: str = Field(default="", max_length=128)
     use_case: str = Field(default="", max_length=5000)
     # Honeypot — bots fill hidden inputs; real users leave it blank.
@@ -911,6 +913,7 @@ class CommercialInquiryRecord(BaseModel):
     company: str = ""
     gpu_count: int | None = None
     duration: str = ""
+    deployment_date: str = ""
     budget: str = ""
     use_case: str = ""
     source_ip: str | None = None
