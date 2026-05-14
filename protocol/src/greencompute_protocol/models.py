@@ -886,6 +886,42 @@ class GreenEnergyAttachment(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Commercial inquiries — public /contact-sales lead form
+# ---------------------------------------------------------------------------
+
+
+class CommercialInquiryCreateRequest(BaseModel):
+    """Lead submitted by a prospect through the public sales form."""
+
+    name: str = Field(default="", max_length=255)
+    email: str = Field(min_length=3, max_length=255)
+    company: str = Field(default="", max_length=255)
+    gpu_count: int | None = Field(default=None, ge=0, le=10000)
+    duration: str = Field(default="", max_length=128)
+    budget: str = Field(default="", max_length=128)
+    use_case: str = Field(default="", max_length=5000)
+    # Honeypot — bots fill hidden inputs; real users leave it blank.
+    website: str = Field(default="", max_length=255)
+
+
+class CommercialInquiryRecord(BaseModel):
+    inquiry_id: str = Field(default_factory=lambda: str(uuid4()))
+    name: str = ""
+    email: str
+    company: str = ""
+    gpu_count: int | None = None
+    duration: str = ""
+    budget: str = ""
+    use_case: str = ""
+    source_ip: str | None = None
+    user_agent: str | None = None
+    status: str = "new"  # new | contacted | won | lost
+    notes: str = ""
+    submitted_at: datetime = Field(default_factory=utcnow)
+    reviewed_at: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
 # Model catalog — Chutes-style shared inference pool
 # ---------------------------------------------------------------------------
 
