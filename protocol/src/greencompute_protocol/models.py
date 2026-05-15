@@ -924,6 +924,64 @@ class CommercialInquiryRecord(BaseModel):
     reviewed_at: datetime | None = None
 
 
+class BareMetalInquiryCreateRequest(BaseModel):
+    """Lead from the dedicated bare-metal node CTA on the rental page."""
+
+    name: str = Field(default="", max_length=255)
+    email: str = Field(min_length=3, max_length=255)
+    company: str = Field(default="", max_length=255)
+    # 4090 / 5090 / mixed — kept as free string so future cards don't need
+    # a schema migration.
+    card_type: str = Field(default="", max_length=32)
+    node_count: int | None = Field(default=None, ge=0, le=10000)
+    required_vram_gb: int | None = Field(default=None, ge=0, le=1_000_000)
+    storage_gb_per_node: int | None = Field(default=None, ge=0, le=1_000_000)
+    work_type: str = Field(default="", max_length=64)
+    deployment_date: str = Field(default="", max_length=64)
+    duration: str = Field(default="", max_length=128)
+    notes: str = Field(default="", max_length=5000)
+    website: str = Field(default="", max_length=255)  # honeypot
+
+
+class BareMetalInquiryRecord(BaseModel):
+    inquiry_id: str = Field(default_factory=lambda: str(uuid4()))
+    name: str = ""
+    email: str
+    company: str = ""
+    card_type: str = ""
+    node_count: int | None = None
+    required_vram_gb: int | None = None
+    storage_gb_per_node: int | None = None
+    work_type: str = ""
+    deployment_date: str = ""
+    duration: str = ""
+    notes: str = ""
+    source_ip: str | None = None
+    user_agent: str | None = None
+    status: str = "new"
+    review_notes: str = ""
+    submitted_at: datetime = Field(default_factory=utcnow)
+    reviewed_at: datetime | None = None
+
+
+class GpuCapacityOverride(BaseModel):
+    """Admin-controlled override for the public capacity surface.
+
+    When sales contracts capacity ahead of the miners being live, we want
+    the public /capacity page (and internal /rental) to advertise the
+    *cluster size*, not the currently-measured count. One row per
+    `gpu_model` (e.g. ``rtx4090``); admin can clear/zero the row to fall
+    back to the measured count.
+    """
+
+    gpu_model: str = Field(min_length=1, max_length=64)
+    total_gpus: int = Field(ge=0, le=1_000_000)
+    available_gpus: int = Field(ge=0, le=1_000_000)
+    note: str = Field(default="", max_length=255)
+    updated_by: str = ""
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
 # ---------------------------------------------------------------------------
 # Model catalog — Chutes-style shared inference pool
 # ---------------------------------------------------------------------------
